@@ -1,0 +1,235 @@
+import tkinter as tk
+from tkinter import messagebox
+from itertools import cycle
+import random
+import string
+
+# Helper functions for Vigenere Cipher and Playfair Cipher
+
+# Vigenere Cipher standard (26 huruf alfabet)
+def vigenere_cipher(text, key, mode='encrypt'):
+    alphabet = string.ascii_uppercase
+    key = key.upper()
+    text = text.upper()
+    key_stream = cycle(key)
+    result = []
+
+    for char in text:
+        if char in alphabet:
+            text_pos = alphabet.index(char)
+            key_pos = alphabet.index(next(key_stream))
+            if mode == 'encrypt':
+                result.append(alphabet[(text_pos + key_pos) % 26])
+            elif mode == 'decrypt':
+                result.append(alphabet[(text_pos - key_pos) % 26])
+        else:
+            result.append(char)
+    
+    return ''.join(result)
+
+# Extended Vigenere Cipher (256 karakter ASCII)
+def extended_vigenere_cipher(text, key, mode='encrypt'):
+    key_stream = cycle(key)
+    result = []
+
+    for char in text:
+        char_code = ord(char)
+        key_code = ord(next(key_stream))
+        if mode == 'encrypt':
+            result.append(chr((char_code + key_code) % 256))
+        elif mode == 'decrypt':
+            result.append(chr((char_code - key_code) % 256))
+    
+    return ''.join(result)
+
+# Playfair Cipher (26 huruf alfabet)
+def playfair_cipher(text, key, mode='encrypt'):
+    alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
+    key = "".join(sorted(set(key.upper()), key=lambda x: key.index(x)))  # Remove duplicates while preserving order
+    matrix = [c for c in key if c in alphabet] + [c for c in alphabet if c not in key]
+
+    # Create 5x5 matrix
+    def create_matrix():
+        return [matrix[i:i + 5] for i in range(0, 25, 5)]
+
+    matrix = create_matrix()
+
+    def find_position(char):
+        for row in range(5):
+            if char in matrix[row]:
+                return (row, matrix[row].index(char))
+        return None
+
+    def process_pair(char1, char2, mode):
+        row1, col1 = find_position(char1)
+        row2, col2 = find_position(char2)
+
+        if row1 == row2:
+            # Same row, shift to right or left
+            if mode == 'encrypt':
+                return matrix[row1][(col1 + 1) % 5] + matrix[row2][(col2 + 1) % 5]
+            else:
+                return matrix[row1][(col1 - 1) % 5] + matrix[row2][(col2 - 1) % 5]
+        elif col1 == col2:
+            # Same column, shift down or up
+            if mode == 'encrypt':
+                return matrix[(row1 + 1) % 5][col1] + matrix[(row2 + 1) % 5][col2]
+            else:
+                return matrix[(row1 - 1) % 5][col1] + matrix[(row2 - 1) % 5][col2]
+        else:
+            # Rectangle swap
+            return matrix[row1][col2] + matrix[row2][col1]
+
+    text = text.upper().replace("J", "I")
+    text = ''.join(c for c in text if c in alphabet)
+
+    if len(text) % 2 != 0:
+        text += 'X'  # Padding if the length of text is odd
+
+    result = []
+    for i in range(0, len(text), 2):
+        char1, char2 = text[i], text[i + 1]
+        if char1 == char2:
+            char2 = 'X'
+        result.append(process_pair(char1, char2, mode))
+    
+    return ''.join(result)
+
+# Enigma Cipher with 3 rotors (26 huruf alfabet)
+class EnigmaMachine:
+    def __init__(self):
+        self.rotor1 = "EKMFLGDQVZNTOWYHXUSPAIBRCJ"
+        self.rotor2 = "AJDKSIRUXBLHWTMCQGZNPYFVOE"
+        self.rotor3 = "BDFHJLCPRTXVZNYEIWGAKMUSQO"
+        self.reflector = "YRUHQSLDPXNGOKMIEBFZCWVJAT"
+        self.rotors = [self.rotor1, self.rotor2, self.rotor3]
+
+    def encrypt(self, text):
+        alphabet = string.ascii_uppercase
+        text = text.upper()
+        result = []
+
+        for char in text:
+            if char in alphabet:
+                char = self.pass_rotor_forward(char)
+                char = self.reflector[alphabet.index(char)]
+                char = self.pass_rotor_backward(char)
+                result.append(char)
+                self.rotate_rotors()
+            else:
+                result.append(char)
+        
+        return ''.join(result)
+
+    def pass_rotor_forward(self, char):
+        alphabet = string.ascii_uppercase
+        for rotor in self.rotors:
+            char = rotor[alphabet.index(char)]
+        return char
+
+    def pass_rotor_backward(self, char):
+        alphabet = string.ascii_uppercase
+        for rotor in reversed(self.rotors):
+            char = alphabet[rotor.index(char)]
+        return char
+
+    def rotate_rotors(self):
+        self.rotor1 = self.rotor1[1:] + self.rotor1[0]
+
+# One-time pad (26 huruf alfabet)
+def one_time_pad(text, pad):
+    alphabet = string.ascii_uppercase
+    text = text.upper()
+    pad = pad.upper()
+    result = []
+
+    for t_char, p_char in zip(text, pad):
+        if t_char in alphabet and p_char in alphabet:
+            t_index = alphabet.index(t_char)
+            p_index = alphabet.index(p_char)
+            result.append(alphabet[(t_index + p_index) % 26])
+        else:
+            result.append(t_char)
+    
+    return ''.join(result)
+
+# GUI Application
+class CipherApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Cipher Application")
+
+        self.label = tk.Label(root, text="Choose Cipher:")
+        self.label.pack()
+
+        self.options = ["Vigenere Cipher", "Extended Vigenere Cipher", "Playfair Cipher", "Enigma Cipher", "One-time Pad"]
+        self.cipher_var = tk.StringVar(value=self.options[0])
+        self.dropdown = tk.OptionMenu(root, self.cipher_var, *self.options)
+        self.dropdown.pack()
+
+        self.text_label = tk.Label(root, text="Text:")
+        self.text_label.pack()
+        self.text_entry = tk.Entry(root, width=50)
+        self.text_entry.pack()
+
+        self.key_label = tk.Label(root, text="Key/Pad:")
+        self.key_label.pack()
+        self.key_entry = tk.Entry(root, width=50)
+        self.key_entry.pack()
+
+        self.result_label = tk.Label(root, text="Result:")
+        self.result_label.pack()
+        self.result_text = tk.Text(root, height=10, width=50)
+        self.result_text.pack()
+
+        self.encrypt_button = tk.Button(root, text="Encrypt", command=self.encrypt_text)
+        self.encrypt_button.pack()
+
+        self.decrypt_button = tk.Button(root, text="Decrypt", command=self.decrypt_text)
+        self.decrypt_button.pack()
+
+    def encrypt_text(self):
+        text = self.text_entry.get()
+        key = self.key_entry.get()
+        cipher_type = self.cipher_var.get()
+
+        if cipher_type == "Vigenere Cipher":
+            result = vigenere_cipher(text, key, mode='encrypt')
+        elif cipher_type == "Extended Vigenere Cipher":
+            result = extended_vigenere_cipher(text, key, mode='encrypt')
+        elif cipher_type == "Playfair Cipher":
+            result = playfair_cipher(text, key, mode='encrypt')
+        elif cipher_type == "Enigma Cipher":
+            enigma = EnigmaMachine()
+            result = enigma.encrypt(text)
+        elif cipher_type == "One-time Pad":
+            result = one_time_pad(text, key)
+
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(tk.END, result)
+
+    def decrypt_text(self):
+        text = self.text_entry.get()
+        key = self.key_entry.get()
+        cipher_type = self.cipher_var.get()
+
+        if cipher_type == "Vigenere Cipher":
+            result = vigenere_cipher(text, key, mode='decrypt')
+        elif cipher_type == "Extended Vigenere Cipher":
+            result = extended_vigenere_cipher(text, key, mode='decrypt')
+        elif cipher_type == "Playfair Cipher":
+            result = playfair_cipher(text, key, mode='decrypt')
+        elif cipher_type == "Enigma Cipher":
+            messagebox.showinfo("Info", "Enigma Cipher tidak dapat di-decrypt dengan key saat ini")
+            result = "Decryption not supported"
+        elif cipher_type == "One-time Pad":
+            messagebox.showinfo("Info", "One-time Pad memerlukan pad yang sama untuk dekripsi")
+            result = "Decryption not supported"
+
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(tk.END, result)
+
+# Main Application
+root = tk.Tk()
+app = CipherApp(root)
+root.mainloop()
