@@ -1,0 +1,88 @@
+import tkinter as tk
+from tkinter import messagebox
+import random
+import string
+
+# Fungsi untuk mengubah plaintext ke ciphertext menggunakan One-Time Pad
+def encrypt_otp(plaintext, key):
+    ciphertext = []
+    for p, k in zip(plaintext, key):
+        encrypted_char = chr(((ord(p) - 65) + (ord(k) - 65)) % 26 + 65)
+        ciphertext.append(encrypted_char)
+    return ''.join(ciphertext)
+
+# Fungsi untuk mengubah ciphertext ke plaintext menggunakan One-Time Pad
+def decrypt_otp(ciphertext, key):
+    plaintext = []
+    for c, k in zip(ciphertext, key):
+        decrypted_char = chr(((ord(c) - 65) - (ord(k) - 65)) % 26 + 65)
+        plaintext.append(decrypted_char)
+    return ''.join(plaintext)
+
+# Fungsi untuk menghasilkan kunci acak (One-Time Pad)
+def generate_key(length):
+    return ''.join(random.choice(string.ascii_uppercase) for _ in range(length))
+
+# Fungsi untuk enkripsi
+def encrypt_text():
+    plaintext = entry_plaintext.get().upper()
+    
+    if not plaintext.isalpha():
+        messagebox.showwarning("Input Error", "Plaintext hanya boleh berisi huruf.")
+        return
+    
+    key = generate_key(len(plaintext))
+    ciphertext = encrypt_otp(plaintext, key)
+    
+    entry_key.delete(0, tk.END)
+    entry_key.insert(0, key)
+    
+    entry_ciphertext.delete(0, tk.END)
+    entry_ciphertext.insert(0, ciphertext)
+
+# Fungsi untuk dekripsi
+def decrypt_text():
+    ciphertext = entry_plaintext.get().upper()
+    key = entry_key.get().upper()
+    
+    if len(ciphertext) != len(key) or not ciphertext.isalpha() or not key.isalpha():
+        messagebox.showwarning("Input Error", "Ciphertext dan kunci harus berisi huruf dengan panjang yang sama.")
+        return
+    
+    plaintext = decrypt_otp(ciphertext, key)
+    
+    entry_ciphertext.delete(0, tk.END)
+    entry_ciphertext.insert(0, plaintext)
+
+# Membuat jendela aplikasi
+root = tk.Tk()
+root.title("One-Time Pad Encryption")
+
+# Label dan Entry untuk memasukkan plaintext
+label_plaintext = tk.Label(root, text="Plaintext / Ciphertext:")
+label_plaintext.grid(row=0, column=0, padx=10, pady=10)
+entry_plaintext = tk.Entry(root, width=50)
+entry_plaintext.grid(row=0, column=1, padx=10, pady=10)
+
+# Label dan Entry untuk menampilkan / memasukkan kunci
+label_key = tk.Label(root, text="Kunci (Key):")
+label_key.grid(row=1, column=0, padx=10, pady=10)
+entry_key = tk.Entry(root, width=50)
+entry_key.grid(row=1, column=1, padx=10, pady=10)
+
+# Tombol Enkripsi
+button_encrypt = tk.Button(root, text="Enkripsi", command=encrypt_text)
+button_encrypt.grid(row=2, column=0, padx=10, pady=10)
+
+# Tombol Dekripsi
+button_decrypt = tk.Button(root, text="Dekripsi", command=decrypt_text)
+button_decrypt.grid(row=2, column=1, padx=10, pady=10)
+
+# Label dan Entry untuk menampilkan ciphertext atau plaintext yang dihasilkan
+label_ciphertext = tk.Label(root, text="Hasil:")
+label_ciphertext.grid(row=3, column=0, padx=10, pady=10)
+entry_ciphertext = tk.Entry(root, width=50)
+entry_ciphertext.grid(row=3, column=1, padx=10, pady=10)
+
+# Menjalankan aplikasi Tkinter
+root.mainloop()
